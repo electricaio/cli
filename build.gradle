@@ -1,0 +1,143 @@
+plugins {
+    id 'java'
+    id 'idea'
+    id 'jacoco'
+    id 'checkstyle'
+    id 'findbugs'
+    id 'application'
+    id 'com.github.kt3k.coveralls' version '2.8.2'
+}
+
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+group = 'io.electrica.cli'
+version = '0.0.1-SNAPSHOT'
+
+mainClassName = 'io.electrica.cli.CliLauncher'
+
+startScripts {
+    applicationName = 'electrica'
+}
+
+ext {
+    findbugsJsr305 = '3.0.2'
+    lombok = '1.18.4'
+    jCommander = '1.71'
+    guava = '26.0-jre'
+    commonsIo = '2.6'
+    zip4j = '1.3.2'
+
+    mockito = '2.23.0'
+    jupiter = '5.3.2'
+}
+
+
+dependencies {
+    compileOnly "org.projectlombok:lombok:$lombok"
+    compileOnly "com.google.code.findbugs:jsr305:$findbugsJsr305"
+    
+    annotationProcessor "org.projectlombok:lombok:$lombok"
+
+    compile "com.google.guava:guava:$guava"
+    compile "com.beust:jcommander:$jCommander"
+    compile "commons-io:commons-io:$commonsIo"
+    compile "net.lingala.zip4j:zip4j:$zip4j"
+    
+    testCompile "org.mockito:mockito-core:$mockito"
+    testCompileOnly "org.projectlombok:lombok:$lombok"
+    testAnnotationProcessor "org.projectlombok:lombok:$lombok"
+
+    testImplementation "org.junit.jupiter:junit-jupiter-api:$jupiter"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$jupiter"
+}
+
+test {
+    useJUnitPlatform()
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled = true // coveralls plugin depends on xml format report
+        html.enabled = true
+    }
+}
+
+// Checkstyle settings
+checkstyle {
+    toolVersion '7.8.1'
+    configFile file("${rootDir}/config/checkstyle/checkstyle.xml")
+}
+checkstyleMain {
+    source = 'src/main/java'
+}
+checkstyleTest {
+    source = 'src/test/java'
+}
+
+tasks.withType(Checkstyle) {
+    reports {
+        xml.enabled false
+        html.enabled true
+    }
+}
+
+// Findbugs  settings
+findbugs {
+    ignoreFailures = false
+    toolVersion = '3.0.1'
+    sourceSets = [sourceSets.main]
+    excludeFilter = file("${rootDir}/config/findbugs/excludeFilter.xml")
+    reportsDir = file("${buildDir}/reports/findbugs")
+    effort = 'max'
+}
+
+tasks.withType(FindBugs) {
+    reports {
+        xml.enabled false
+        html.enabled true
+    }
+}
+
+def projects = subprojects
+
+task jacocoMerge(type: JacocoMerge) {
+    projects.each { subproject ->
+        executionData subproject.tasks.withType(Test)
+    }
+    doFirst {
+        executionData = files(executionData.findAll { it.exists() })
+    }
+}
+
+task jacocoRootReport(type: JacocoReport, group: 'Coverage reports') {
+    description = 'Generates an aggregate report from all subprojects'
+    dependsOn projects.test, jacocoMerge
+
+    additionalSourceDirs = files(projects.sourceSets.main.allSource.srcDirs)
+    sourceDirectories = files(projects.sourceSets.main.allSource.srcDirs)
+    classDirectories = files(projects.sourceSets.main.output)
+    executionData jacocoMerge.destinationFile
+
+    reports {
+        html.enabled = true // human readable
+        xml.enabled = true // required by coveralls
+    }
+}
+
+coveralls {
+    sourceDirs = projects.sourceSets.main.allSource.srcDirs.flatten()
+    jacocoReportPath = "${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
+}
+
+tasks.coveralls {
+    group = 'Coverage reports'
+    description = 'Uploads the aggregated coverage report to Coveralls'
+
+    dependsOn jacocoRootReport
+}
