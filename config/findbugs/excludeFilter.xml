@@ -35,7 +35,7 @@
         <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
     </Match>
     <Match>
-        <Class name="io.electrica.pipeline.cli.PipelineLauncherBuilder"/>
+        <Class name="io.electrica.cli.PipelineLauncherBuilder"/>
         <Method name="addLambdaJarsToArchive"/>
         <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
     </Match>

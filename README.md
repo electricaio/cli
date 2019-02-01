@@ -1,4 +1,4 @@
-# CLI
+# Command Line Interface
 Allow to simplify Lambda development and Pipeline building.
 
 ## Assemble
