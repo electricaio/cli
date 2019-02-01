@@ -41,14 +41,14 @@ ext {
 dependencies {
     compileOnly "org.projectlombok:lombok:$lombok"
     compileOnly "com.google.code.findbugs:jsr305:$findbugsJsr305"
-    
+
     annotationProcessor "org.projectlombok:lombok:$lombok"
 
     compile "com.google.guava:guava:$guava"
     compile "com.beust:jcommander:$jCommander"
     compile "commons-io:commons-io:$commonsIo"
     compile "net.lingala.zip4j:zip4j:$zip4j"
-    
+
     testCompile "org.mockito:mockito-core:$mockito"
     testCompileOnly "org.projectlombok:lombok:$lombok"
     testAnnotationProcessor "org.projectlombok:lombok:$lombok"
@@ -104,40 +104,20 @@ tasks.withType(FindBugs) {
     }
 }
 
-def projects = subprojects
-
-task jacocoMerge(type: JacocoMerge) {
-    projects.each { subproject ->
-        executionData subproject.tasks.withType(Test)
-    }
-    doFirst {
-        executionData = files(executionData.findAll { it.exists() })
-    }
-}
-
-task jacocoRootReport(type: JacocoReport, group: 'Coverage reports') {
-    description = 'Generates an aggregate report from all subprojects'
-    dependsOn projects.test, jacocoMerge
-
-    additionalSourceDirs = files(projects.sourceSets.main.allSource.srcDirs)
-    sourceDirectories = files(projects.sourceSets.main.allSource.srcDirs)
-    classDirectories = files(projects.sourceSets.main.output)
-    executionData jacocoMerge.destinationFile
-
+jacocoTestReport {
     reports {
-        html.enabled = true // human readable
-        xml.enabled = true // required by coveralls
+        xml.enabled = true // coveralls plugin depends on xml format report
+        html.enabled = true
     }
 }
 
 coveralls {
-    sourceDirs = projects.sourceSets.main.allSource.srcDirs.flatten()
-    jacocoReportPath = "${buildDir}/reports/jacoco/jacocoRootReport/jacocoRootReport.xml"
+    jacocoReportPath 'build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml'
 }
 
 tasks.coveralls {
     group = 'Coverage reports'
     description = 'Uploads the aggregated coverage report to Coveralls'
 
-    dependsOn jacocoRootReport
+    dependsOn check
 }
